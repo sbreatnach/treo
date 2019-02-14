@@ -115,4 +115,4 @@ wish to access metadata on a function from a middleware, for example.
 
 Copyright © 2019 Shane Breatnach
 
-Distributed under the Eclipse Public License version 1.0.
+Distributed under the Eclipse Public License version 2.0.
