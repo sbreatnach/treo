@@ -1,14 +1,19 @@
-(ns com.glicsoft.treo.dispatcher-test
+(ns treo.dispatcher-test
   (:require [clojure.test :refer :all]
             [ring.mock.request :as rmock]
             [ring.util.response :as rresp]
-            [com.glicsoft.treo.dispatcher :as dispatcher])
-  (:import [java.net HttpURLConnection]))
+            [treo.dispatcher :as dispatcher])
+  (:import [java.net HttpURLConnection]
+           [clojure.lang ExceptionInfo]))
 
 (deftest test-create-route-regex
   (testing "Expected regexes are created based on arguments"
     (is (= "^/api/v1/?$"
            (str (dispatcher/create-route-regex "/api/v1"))))
+    (is (= "^/api/v1/?$"
+           (str (dispatcher/create-route-regex "/api/v1" ""))))
+    (is (= "^/api/v1/?$"
+           (str (dispatcher/create-route-regex "/api/v1" nil))))
     (is (= "^/api/v1/testresource/?$"
            (str (dispatcher/create-route-regex "/api/v1" "testresource"))))
     (is (= "^/api/v1/testresource/apply/?$"
@@ -26,8 +31,8 @@
               :scheme :http
               :request-method :get
               :headers {"host" "localhost"}
-              :route {:groups []
-                      :named-groups {}}}
+              :treo/route {:groups []
+                           :named-groups {}}}
              (route-handler (rmock/request :get "/api/v1/test"))))
       (is (nil? (route-handler (rmock/request :get "/api/v1/nottest"))))))
   (testing "Validate that generated grouped handler has expected results"
@@ -41,7 +46,7 @@
               :scheme :http
               :request-method :get
               :headers {"host" "localhost"}
-              :route {:groups ["34"], :named-groups {}}}
+              :treo/route {:groups ["34"], :named-groups {}}}
              (route-handler (rmock/request :get "/api/v1/test/34/"))))
       (is (nil? (route-handler (rmock/request :get "/api/v1/test"))))))
   (testing "Validate that generated named group handler has expected results"
@@ -55,7 +60,7 @@
               :scheme :http
               :request-method :get
               :headers {"host" "localhost"}
-              :route {:groups ["34"], :named-groups {:id "34"}}}
+              :treo/route {:groups ["34"], :named-groups {:id "34"}}}
              (route-handler (rmock/request :get "/api/v1/test/34/"))))
       (is (nil? (route-handler (rmock/request :get "/api/v1/test")))))))
 
@@ -63,7 +68,7 @@
   "Generates test namespace with the given name and pairs of fn
   name/implementation. Returns the symbol to the newly generated namespace."
   [name & ns-fns]
-  (let [test-ns-symbol (symbol (str "com.glicsoft.seamlessd." name))
+  (let [test-ns-symbol (symbol (str "com.example." name))
         test-ns (create-ns test-ns-symbol)]
     (doseq [[fn-sym fn-val] ns-fns]
       (intern test-ns fn-sym fn-val))
@@ -112,7 +117,7 @@
 
 (deftest test-namespace-route-generator
   (let [generator (dispatcher/namespace-route-generator "/api/v1")]
-    (testing "Validate route generated functions as expected"
+    (testing "Validate route sequence generated functions as expected"
       (let [test-ns (gen-test-ns "handler2"
                                  ['create (fn [_] (rresp/response "create"))])
             route-handler (generator ["testresource"] test-ns)]
@@ -120,11 +125,34 @@
                 :headers {}
                 :body "create"}
                (route-handler (rmock/request :post "/api/v1/testresource"))))))
-    (testing "Validate route generated with middleware functions as expected"
+    (testing "Validate string route generated functions as expected"
       (let [test-ns (gen-test-ns "handler2"
+                                 ['create (fn [_] (rresp/response "create"))])
+            route-handler (generator "testresource" test-ns)]
+        (is (= {:status HttpURLConnection/HTTP_OK
+                :headers {}
+                :body "create"}
+               (route-handler (rmock/request :post "/api/v1/testresource"))))))
+    (testing "Validate null route generated functions as expected"
+      (let [test-ns (gen-test-ns "handler2"
+                                 ['create (fn [_] (rresp/response "create"))])
+            route-handler (generator nil test-ns)]
+        (is (= {:status HttpURLConnection/HTTP_OK
+                :headers {}
+                :body "create"}
+               (route-handler (rmock/request :post "/api/v1"))))))
+    (testing "Verify an invalid route results in error thrown"
+      (let [test-ns (gen-test-ns "handler2"
+                                 ['create (fn [_] (rresp/response "create"))])]
+        (is (thrown? ExceptionInfo (generator 3534 test-ns)))))
+    (testing "Validate route generated with middleware functions as expected"
+      (let [invoke-count (atom 0)
+            test-ns (gen-test-ns "handler2"
                                  ['create (fn [request]
+                                            (swap! invoke-count inc)
                                             (rresp/response
-                                             (select-keys request [:test1 :test2])))])
+                                             (assoc (select-keys request [:test1 :test2])
+                                                    :invoke-count @invoke-count)))])
             test-middleware1 (fn [handler]
                                (fn [request]
                                  (handler (assoc request :test1 "value1"))))
@@ -135,5 +163,5 @@
                                      test-middleware1 test-middleware2)]
         (is (= {:status HttpURLConnection/HTTP_OK
                 :headers {}
-                :body {:test1 "value1", :test2 "value2"}}
+                :body {:test1 "value1", :test2 "value2" :invoke-count 1}}
                (route-handler (rmock/request :post "/api/v1/testresource"))))))))
