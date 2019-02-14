@@ -19,6 +19,7 @@ Import into your project dependencies:
 
 Create a namespace with specifically named functions:
 
+``` clojure
     (ns com.example.test.api.v1.note
       (:require [ring.util.response :as ring])
       (:import [java.net HttpURLConnection]))
@@ -28,10 +29,12 @@ Create a namespace with specifically named functions:
       [request]
       (ring/status (ring/response [{"key" 1 "value" "note1"}])
                    HttpURLConnection/HTTP_OK))
+```
 
 Now generate your Ring handler using the namespace symbol. Here's an example
 that can be run using Leiningen's `main` hook:
 
+``` clojure
     (ns com.example.test.api.bootstrap
       (:require [treo.dispatcher :as treo]
                 [ring.middleware.format :as ring-format]
@@ -43,6 +46,7 @@ that can be run using Leiningen's `main` hook:
                                             'com.example.test.api.v1.note
                                             ring-format/wrap-restful-format)
                          {:port 3000})))
+```
 
 Once run, this should now respond to http://localhost:3000/api/v1/note
 
@@ -88,8 +92,10 @@ request map. For example, with the regex "^/api/v1/note/(\s)/(?<id>\d+)/?$"
 and the request URL /api/v1/note/what/342, the Ring request will now include
 the following data:
 
+``` clojure
     {:treo/route {:groups ["what" "342"]
                   :named-groups {:id "342"}}}
+```
 
 ### Namespaces
 
