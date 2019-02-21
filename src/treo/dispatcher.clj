@@ -50,11 +50,38 @@
    :patch 'change
    :delete 'delete})
 
-(defn namespaced-handler-fn
-  "Returns the underlying method function from the namespace handler for the
-  given Ring request. nil is returned if no matched function found."
+(defn method-handler-fn
+  "Returns the underlying method function from the request method handler for
+  the given Ring request. nil is returned if no matched function found."
   [handler-wrapper {:keys [request-method]}]
   (-> handler-wrapper meta :treo/wrapped-fns (get request-method)))
+
+(defn create-request-method-handler
+  "Creates a multi-method request handler based on the given map of request
+  methods to handler functions.
+
+  Invokes the relevant function when request is processed. Responds with HTTP
+  Bad Method if request method doesn't have a matching function in the namespace.
+
+  May optionally specify the supported set of request methods.
+  May optionally specify the response body for the Bad Method response, which
+  defaults to an empty body."
+  [method-fns & [{:keys [methods method-not-allowed-body]
+                  :or {methods (-> ns-method-fns keys set)}}]]
+  (with-meta
+    (fn [{:keys [request-method] :as request}]
+      (if-let [method-fn (get method-fns request-method)]
+        (do
+          (log/trace "Matched" method-fn "with method" request-method)
+          (let [response (method-fn request)]
+            (log/trace "Response" response)
+            response))
+
+        (when (contains? methods request-method)
+          (log/debug "No matched function for method" request-method)
+          (rresp/status (rresp/response method-not-allowed-body)
+                        HttpURLConnection/HTTP_BAD_METHOD))))
+    {:treo/wrapped-fns method-fns}))
 
 (defn create-namespace-handler
   "Creates a multi-method request handler based on the given namespace. Uses
@@ -67,32 +94,17 @@
   names that map to them.
   May optionally specify the response body for the Bad Method response, which
   defaults to an empty body."
-  [handler-ns & [{:keys [methods method-fns method-not-allowed-body]
-                  :or {method-fns ns-method-fns}}]]
+  [handler-ns & [{:keys [method-fns]
+                  :or {method-fns ns-method-fns}
+                  :as opts}]]
   ;; attempt to pre-load the namespace if it's not available
   (when (nil? (find-ns handler-ns))
     (require handler-ns))
-  (let [methods (or methods (set (keys method-fns)))
-        found-fns (into {} (for [[key value] (select-keys method-fns methods)
+  (let [found-fns (into {} (for [[key value] method-fns
                                  :let [method-fn (ns-resolve handler-ns value)]
                                  :when method-fn]
                              [key method-fn]))]
-    ;; inject matched namespace methods fns into generated request handler fn
-    (with-meta
-      (fn [{:keys [request-method] :as request}]
-        (if-let [found-fn (get found-fns request-method)]
-          (do
-            (log/trace "Matched" handler-ns "with method" request-method)
-            (let [response (found-fn request)]
-              (log/trace "Response" response)
-              response))
-
-          (when (contains? methods request-method)
-            (log/trace "Matched" handler-ns
-                       "but no function for method" request-method)
-            (rresp/status (rresp/response method-not-allowed-body)
-                          HttpURLConnection/HTTP_BAD_METHOD))))
-      {:treo/wrapped-fns found-fns})))
+    (create-request-method-handler found-fns opts)))
 
 (defn threading-fn
   "Function version of the threading -> macro that applies the variable sequence

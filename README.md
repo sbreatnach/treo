@@ -15,7 +15,7 @@ A combination of the following:
 
 Import into your project dependencies:
 
-    [treo "0.1.0"]
+    [treo "0.2.0"]
 
 Create a namespace with specifically named functions:
 
@@ -114,8 +114,28 @@ The defaults (below) can be overridden by rebinding this variable.
 |DELETE|delete|
 
 If it's necessary to access the specific request method function from the
-namespace handler, `namespaced-handler-fn` enables this. This is useful if you
+namespace handler, `method-handler-fn` enables this. This is useful if you
 wish to access metadata on a function from a middleware, for example.
+
+### Request Method Handlers
+
+For added flexibility, you can use the
+`treo.dispatcher/create-request-method-handler` function directly. This is
+what the namespace introspection wraps - a function that returns a Ring
+handler which invokes one of a set of functions based on the incoming
+request method.
+
+A simple example run from the REPL:
+
+``` clojure
+user> (require '[ring.mock.request :as mock])
+user> (require '[treo.dispatcher :as dispatcher])
+user> (def handler (dispatcher/create-request-method-handler {:get (fn [{:keys [uri]}] uri)}))
+user> (handler (mock/request :get "/api/v1/test"))
+/api/v1/test
+user> (handler (mock/request :post "/api/v1/test"))
+{:status 405, :headers {}, :body nil}
+```
 
 ## License
 

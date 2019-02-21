@@ -64,6 +64,44 @@
              (route-handler (rmock/request :get "/api/v1/test/34/"))))
       (is (nil? (route-handler (rmock/request :get "/api/v1/test")))))))
 
+(deftest test-create-request-method-handler
+  (testing "Created handler matches against request method as expected"
+    (let [handler (dispatcher/create-request-method-handler
+                   {:get (fn [_] (rresp/response "getting"))
+                    :post (fn [_] (rresp/response "creating"))})]
+      (is (= {:status HttpURLConnection/HTTP_OK
+              :headers {}
+              :body "getting"}
+             (handler (rmock/request :get "/api/v1/test"))))
+      (is (= {:status HttpURLConnection/HTTP_OK
+              :headers {}
+              :body "creating"}
+             (handler (rmock/request :post "/api/v1/test"))))
+      (is (= {:status HttpURLConnection/HTTP_BAD_METHOD
+              :headers {}
+              :body nil}
+             (handler (rmock/request :delete "/api/v1/test"))))
+      (is (= {:status HttpURLConnection/HTTP_BAD_METHOD
+              :headers {}
+              :body nil}
+             (handler (rmock/request :patch "/api/v1/test"))))
+      (is (= {:status HttpURLConnection/HTTP_BAD_METHOD
+              :headers {}
+              :body nil}
+             (handler (rmock/request :put "/api/v1/test"))))))
+  (testing "Created handler rejects with configured body for invalid request method"
+    (let [handler (dispatcher/create-request-method-handler
+                   {:get (fn [_] (rresp/response "getting"))}
+                   {:method-not-allowed-body {:detail "Invalid request"}})]
+      (is (= {:status HttpURLConnection/HTTP_OK
+              :headers {}
+              :body "getting"}
+             (handler (rmock/request :get "/api/v1/test"))))
+      (is (= {:status HttpURLConnection/HTTP_BAD_METHOD
+              :headers {}
+              :body {:detail "Invalid request"}}
+             (handler (rmock/request :post "/api/v1/test")))))))
+
 (defn gen-test-ns
   "Generates test namespace with the given name and pairs of fn
   name/implementation. Returns the symbol to the newly generated namespace."
