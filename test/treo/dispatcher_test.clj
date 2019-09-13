@@ -6,6 +6,17 @@
   (:import [java.net HttpURLConnection]
            [clojure.lang ExceptionInfo]))
 
+(deftest test-named-groups
+  (testing "Named groups returned from regex as expected"
+    (is (= []
+           (dispatcher/named-groups "^/api/v1/testapi/?$")))
+    (is (= ["id1"]
+           (dispatcher/named-groups "^/api/v1/testapi/(?<id1>\\w+)/?$")))
+    (is (= ["id1" "id2"]
+           (dispatcher/named-groups "^/api/v1/testapi/(?<id1>\\w+)/(?<id2>\\d+)/?$")))
+    (is (= ["id1" "id2" "id3"]
+          (dispatcher/named-groups "^/api/v1/testapi/(?<id1>\\w+)/(?<id2>\\d+)/(?<id3>\\d+)/?$")))))
+
 (deftest test-create-route-regex
   (testing "Expected regexes are created based on arguments"
     (is (= "^/api/v1/?$"
@@ -62,7 +73,22 @@
               :headers {"host" "localhost"}
               :treo/route {:groups ["34"], :named-groups {:id "34"}}}
              (route-handler (rmock/request :get "/api/v1/test/34/"))))
-      (is (nil? (route-handler (rmock/request :get "/api/v1/test")))))))
+      (is (nil? (route-handler (rmock/request :get "/api/v1/test"))))))
+  (testing "Validate that multiple named group handlers have expected results"
+           (let [route-handler (dispatcher/uri-regex-route #"^/api/v1/test/(?<id>\d+)/(?<id2>\w+)/?$"
+                                                           (fn [request] request))]
+             (is (= {:server-port 80
+                     :server-name "localhost"
+                     :remote-addr "localhost"
+                     :uri "/api/v1/test/34/id55"
+                     :protocol "HTTP/1.1"
+                     :scheme :http
+                     :request-method :get
+                     :headers {"host" "localhost"}
+                     :treo/route {:groups ["34" "id55"]
+                                  :named-groups {:id "34" :id2 "id55"}}}
+                    (route-handler (rmock/request :get "/api/v1/test/34/id55"))))
+             (is (nil? (route-handler (rmock/request :get "/api/v1/test")))))))
 
 (deftest test-create-request-method-handler
   (testing "Created handler matches against request method as expected"

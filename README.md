@@ -15,7 +15,7 @@ A combination of the following:
 
 Import into your project dependencies:
 
-    [treo "0.2.0"]
+    [treo "0.2.1"]
 
 Create a namespace with specifically named functions:
 
@@ -24,7 +24,7 @@ Create a namespace with specifically named functions:
       (:require [ring.util.response :as ring])
       (:import [java.net HttpURLConnection]))
 
-    (defn index
+    (defn show
       "Returns the list of notes. Corresponds to a GET"
       [request]
       (ring/status (ring/response [{"key" 1 "value" "note1"}])
