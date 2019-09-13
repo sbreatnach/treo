@@ -1,4 +1,4 @@
-(defproject treo "0.2.0"
+(defproject treo "0.2.1"
   :description "Simple routing library that hooks into namespace functions"
   :url "https://github.com/sbreatnach/treo"
   :license {:name "Eclipse Public License"

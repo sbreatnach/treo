@@ -4,12 +4,12 @@
   (:import [java.net HttpURLConnection]))
 
 (def name-regex
-  #"\(\?<([a-zA-Z][a-zA-Z0-9]+)>")
+  #"\(\?<([a-zA-Z][a-zA-Z0-9_-]+)>")
 
 (defn named-groups
   "Returns sequence of named groups in the given pattern"
   [pattern]
-  (next (re-find name-regex (str pattern))))
+  (map second (re-seq name-regex (str pattern))))
 
 (defn create-route-regex
   "Constructs a route regular expression for the given parts of a route.
