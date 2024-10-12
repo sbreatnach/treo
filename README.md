@@ -4,22 +4,28 @@ Treo (Irish for route) is a simple Ring routing library for Clojure. What
 makes it different from the many, many, many other routing libraries out there?
 A combination of the following:
 
-* Has a simple set of functionality for generating routes from namespaces
-* Regular expression route matching
-* Interleaved middleware that is run AFTER route matching but BEFORE handler triggered
-* Works within the Ring system, does not try to replace it.
-* No unnecessary DSL or macros
-* Good test coverage
+- Has a simple set of functionality for generating routes from namespaces
+- Regular expression route matching
+- Interleaved middleware that is run AFTER route matching but BEFORE handler triggered
+- Works within the Ring system, does not try to replace it.
+- No unnecessary DSL or macros
+- Good test coverage
 
 ## Getting Started
 
 Import into your project dependencies:
 
-    [treo "0.2.1"]
+deps.edn
+
+    treo/treo {:mvn/version "0.2.2"}
+
+Leiningen:
+
+    [treo "0.2.2"]
 
 Create a namespace with specifically named functions:
 
-``` clojure
+```clojure
     (ns com.example.test.api.v1.note
       (:require [ring.util.response :as ring])
       (:import [java.net HttpURLConnection]))
@@ -34,7 +40,7 @@ Create a namespace with specifically named functions:
 Now generate your Ring handler using the namespace symbol. Here's an example
 that can be run using Leiningen's `main` hook:
 
-``` clojure
+```clojure
     (ns com.example.test.api.bootstrap
       (:require [treo.dispatcher :as treo]
                 [ring.middleware.format :as ring-format]
@@ -54,8 +60,9 @@ Once run, this should now respond to http://localhost:3000/api/v1/note
 
 The core function is `treo.dispatcher/namespace-route-generator`.
 It creates a function which takes two required arguments:
-* `route-parts` - a sequence of strings representing the REST resource and any arguments
-* `handler-ns` - a namespace symbol defining the implemented HTTP methods
+
+- `route-parts` - a sequence of strings representing the REST resource and any arguments
+- `handler-ns` - a namespace symbol defining the implemented HTTP methods
 
 It also takes a variable number of optional Ring middleware functions, which
 are applied, in the order given, before the underlying namespace is triggered
@@ -78,11 +85,11 @@ composed URL and each URL is a regular expression for more flexible matching.
 For example, with a prefix of "/api/v1", here are the resulting regexes for
 the given arguments:
 
-* [""] -> "^/api/v1/?$"
-* ["note"] -> "^/api/v1/note/?$"
-* ["note" "\s+"] -> "^/api/v1/note/\s+/?$"
-* ["note" "(\s+)" "(?<id>\d+)"] -> "^/api/v1/note/(\s)/(?<id>\d+)/?$"
-* "note" -> "^/api/v1/note/?$"
+- [""] -> "^/api/v1/?$"
+- ["note"] -> "^/api/v1/note/?$"
+- ["note" "\s+"] -> "^/api/v1/note/\s+/?$"
+- ["note" "(\s+)" "(?<id>\d+)"] -> "^/api/v1/note/(\s)/(?<id>\d+)/?$"
+- "note" -> "^/api/v1/note/?$"
 
 If a string is supplied instead of a sequence of strings, it treats it as a
 sequence of length 1.
@@ -92,7 +99,7 @@ request map. For example, with the regex "^/api/v1/note/(\s)/(?<id>\d+)/?$"
 and the request URL /api/v1/note/what/342, the Ring request will now include
 the following data:
 
-``` clojure
+```clojure
     {:treo/route {:groups ["what" "342"]
                   :named-groups {:id "342"}}}
 ```
@@ -105,13 +112,13 @@ result in a 405 Not Allowed response for that HTTP method. The precise set of
 function names is defined at `treo.dispatcher/ns-method-fns`.
 The defaults (below) can be overridden by rebinding this variable.
 
-|HTTP Method|Function Name|
-|---|---|
-|GET|show|
-|POST|create|
-|PUT|change|
-|PATCH|change|
-|DELETE|delete|
+| HTTP Method | Function Name |
+| ----------- | ------------- |
+| GET         | show          |
+| POST        | create        |
+| PUT         | change        |
+| PATCH       | change        |
+| DELETE      | delete        |
 
 If it's necessary to access the specific request method function from the
 namespace handler, `method-handler-fn` enables this. This is useful if you
@@ -127,7 +134,7 @@ request method.
 
 A simple example run from the REPL:
 
-``` clojure
+```clojure
 user> (require '[ring.mock.request :as mock])
 user> (require '[treo.dispatcher :as dispatcher])
 user> (def handler (dispatcher/create-request-method-handler {:get (fn [{:keys [uri]}] uri)}))
@@ -139,6 +146,6 @@ user> (handler (mock/request :post "/api/v1/test"))
 
 ## License
 
-Copyright © 2019 Shane Breatnach
+Copyright © 2019-2024 Shane Breatnach
 
 Distributed under the Eclipse Public License version 2.0.
