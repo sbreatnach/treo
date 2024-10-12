@@ -36,7 +36,7 @@
                                                     (fn [request] request))]
       (is (= {:server-port 80
               :server-name "localhost"
-              :remote-addr "localhost"
+              :remote-addr "127.0.0.1"
               :uri "/api/v1/test"
               :protocol "HTTP/1.1"
               :scheme :http
@@ -51,7 +51,7 @@
                                                     (fn [request] request))]
       (is (= {:server-port 80
               :server-name "localhost"
-              :remote-addr "localhost"
+              :remote-addr "127.0.0.1"
               :uri "/api/v1/test/34/"
               :protocol "HTTP/1.1"
               :scheme :http
@@ -65,7 +65,7 @@
                                                     (fn [request] request))]
       (is (= {:server-port 80
               :server-name "localhost"
-              :remote-addr "localhost"
+              :remote-addr "127.0.0.1"
               :uri "/api/v1/test/34/"
               :protocol "HTTP/1.1"
               :scheme :http
@@ -79,7 +79,7 @@
                                                            (fn [request] request))]
              (is (= {:server-port 80
                      :server-name "localhost"
-                     :remote-addr "localhost"
+                     :remote-addr "127.0.0.1"
                      :uri "/api/v1/test/34/id55"
                      :protocol "HTTP/1.1"
                      :scheme :http
